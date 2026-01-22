@@ -3,9 +3,10 @@
 <div align="center">
   <img src="assets/images/coffee-cup.png" alt="Divine Manager Logo" width="100"/>
   
-  [![Flutter](https://img.shields.io/badge/Flutter-3.10.7-blue.svg?logo=flutter)](https://flutter.dev/)
-  [![Dart](https://img.shields.io/badge/Dart-3.0+-blue.svg?logo=dart)](https://dart.dev/)
+  [![Flutter](https://img.shields.io/badge/Flutter-3.38.7-blue.svg?logo=flutter)](https://flutter.dev/)
+  [![Dart](https://img.shields.io/badge/Dart-3.10.7-blue.svg?logo=dart)](https://dart.dev/)
   [![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
+  [![Platform](https://img.shields.io/badge/Platform-Web%20%7C%20macOS%20%7C%20iOS-orange.svg)](https://flutter.dev/)
   
   *A custom-built café management solution designed for local coffee shop operations*
 </div>
@@ -72,10 +73,17 @@ lib/
 
 ### Prerequisites
 
-- Flutter SDK 3.10.7 or higher
-- Dart 3.0 or higher
-- Android Studio / VS Code
+- Flutter SDK 3.38.7 or higher
+- Dart 3.10.7 or higher
+- Android Studio / Xcode / VS Code
 - Git
+
+### Supported Platforms
+
+- ✅ **Web** (Chrome)
+- ✅ **macOS** (10.15+)
+- ✅ **iOS** (13.0+)
+- ✅ **Android** (configured)
 
 ### Installation
 
@@ -92,13 +100,46 @@ lib/
 
 3. **Generate Hive adapters**
    ```bash
-   flutter packages pub run build_runner build
+   flutter packages pub run build_runner build --delete-conflicting-outputs
    ```
 
 4. **Run the application**
+   
+   **Web (Chrome):**
    ```bash
-   flutter run
+   flutter run -d chrome
    ```
+   
+   **macOS:**
+   ```bash
+   flutter run -d macos
+   ```
+   
+   **iOS (via Xcode):**
+   ```bash
+   open ios/Runner.xcworkspace
+   # Then click Play button in Xcode
+   ```
+
+### Building for Distribution
+
+**macOS App (.dmg):**
+```bash
+# macOS .dmg file available in build/DivineManager.dmg
+# Ready to install on any Mac (macOS 10.15+)
+```
+
+**iOS App:**
+1. Open `ios/Runner.xcworkspace` in Xcode
+2. Connect your iPhone
+3. Select your device and click ▶️ Play
+4. App will install on your iPhone
+
+**Web:**
+```bash
+flutter build web --release
+# Output in build/web/
+```
 
 ## 📦 Dependencies
 
@@ -340,6 +381,9 @@ Divine Manager combines **functionality with aesthetics**, featuring:
   - Inventory management
   - Order processing
   - Export functionality
+  - Multi-platform support (Web, macOS, iOS)
+  - macOS .dmg installer available
+  - iOS app via Xcode
 
 ---
 
