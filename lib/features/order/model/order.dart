@@ -49,12 +49,16 @@ class Order extends HiveObject {
   @HiveField(4)
   final String status;
 
+  @HiveField(5)
+  final String paymentMethod;
+
   Order({
     required this.id,
     required this.items,
     required this.totalPrice,
     required this.timestamp,
-    this.status = 'completed',
+    this.status = 'pending',
+    this.paymentMethod = 'Pending',
   });
 
   List<OrderItem> get menuItems => items;
@@ -65,6 +69,7 @@ class Order extends HiveObject {
     double? totalPrice,
     DateTime? timestamp,
     String? status,
+    String? paymentMethod,
   }) {
     return Order(
       id: id ?? this.id,
@@ -72,6 +77,7 @@ class Order extends HiveObject {
       totalPrice: totalPrice ?? this.totalPrice,
       timestamp: timestamp ?? this.timestamp,
       status: status ?? this.status,
+      paymentMethod: paymentMethod ?? this.paymentMethod,
     );
   }
 

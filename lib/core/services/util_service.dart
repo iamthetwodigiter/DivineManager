@@ -32,56 +32,89 @@ class UtilService {
     }
   }
 
-  // Common SnackBar utilities to reduce code duplication
   static void showSuccessSnackBar(BuildContext context, String message) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Row(
-          children: [
-            Icon(Icons.check_circle, color: AppTheme.cardColor),
-            const SizedBox(width: 8),
-            Text(message),
-          ],
-        ),
-        backgroundColor: AppTheme.primaryColor,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(10),
-        ),
-        behavior: SnackBarBehavior.floating,
-        margin: const EdgeInsets.all(16),
-      ),
-    );
+    if (!_isValidContext(context)) return;
+    
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!context.mounted) return;
+      
+      try {
+        final messenger = ScaffoldMessenger.of(context);
+        messenger.clearSnackBars();
+        messenger.showSnackBar(
+          SnackBar(
+            content: Row(
+              children: [
+                Icon(Icons.check_circle, color: AppTheme.cardColor),
+                const SizedBox(width: 8),
+                Expanded(child: Text(message)),
+              ],
+            ),
+            backgroundColor: AppTheme.primaryColor,
+            duration: const Duration(seconds: 2),
+            behavior: SnackBarBehavior.fixed,
+          ),
+        );
+      } catch (e) {
+        debugPrint('Success: $message');
+      }
+    });
   }
 
   static void showErrorSnackBar(BuildContext context, String message) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(message),
-        backgroundColor: AppTheme.errorColor,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(10),
-        ),
-        behavior: SnackBarBehavior.floating,
-        margin: const EdgeInsets.all(16),
-      ),
-    );
+    if (!_isValidContext(context)) return;
+    
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!context.mounted) return;
+      
+      try {
+        final messenger = ScaffoldMessenger.of(context);
+        messenger.clearSnackBars();
+        messenger.showSnackBar(
+          SnackBar(
+            content: Text(message),
+            backgroundColor: AppTheme.errorColor,
+            duration: const Duration(seconds: 3),
+            behavior: SnackBarBehavior.fixed,
+          ),
+        );
+      } catch (e) {
+        debugPrint('Error: $message');
+      }
+    });
   }
 
   static void showWarningSnackBar(BuildContext context, String message) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(message),
-        backgroundColor: AppTheme.primaryOrange,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(10),
-        ),
-        behavior: SnackBarBehavior.floating,
-        margin: const EdgeInsets.all(16),
-      ),
-    );
+    if (!_isValidContext(context)) return;
+    
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!context.mounted) return;
+      
+      try {
+        final messenger = ScaffoldMessenger.of(context);
+        messenger.clearSnackBars();
+        messenger.showSnackBar(
+          SnackBar(
+            content: Text(message),
+            backgroundColor: AppTheme.primaryOrange,
+            duration: const Duration(seconds: 2),
+            behavior: SnackBarBehavior.fixed,
+          ),
+        );
+      } catch (e) {
+        debugPrint('Warning: $message');
+      }
+    });
+  }
+  
+  static bool _isValidContext(BuildContext context) {
+    try {
+      return context.mounted && context.findAncestorWidgetOfExactType<Scaffold>() != null;
+    } catch (e) {
+      return false;
+    }
   }
 
-  // Rank color utility for analytics
   static Color getRankColor(int index) {
     switch (index) {
       case 0:
