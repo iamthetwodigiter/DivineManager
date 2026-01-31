@@ -7,6 +7,7 @@ import 'package:divine_manager/features/order/model/menu_items.dart';
 import 'package:divine_manager/features/order/model/order.dart';
 import 'package:divine_manager/features/order/services/order_service.dart';
 import 'package:divine_manager/features/order/view/pages/menu_management_page.dart';
+import 'package:divine_manager/features/order/view/pages/order_list_page.dart';
 import 'package:divine_manager/features/order/view/widgets/order_item_card.dart';
 import 'package:divine_manager/features/order/view/widgets/previous_order_card.dart';
 import 'package:flutter/material.dart';
@@ -111,13 +112,32 @@ class _OrderPageState extends ConsumerState<OrderPage> {
         }
       } catch (e) {
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('Error placing order: $e'),
-              backgroundColor: AppTheme.primaryRed,
-            ),
-          );
+          UtilService.showErrorSnackBar(context, 'Error placing order: $e');
         }
+      }
+    }
+  }
+
+  Future<void> _updateOrder(Order updatedOrder) async {
+    try {
+      final allOrders = await _orderService.getAllOrders();
+      final index = allOrders.indexWhere((o) => 
+          o.id == updatedOrder.id && 
+          o.timestamp.millisecondsSinceEpoch == updatedOrder.timestamp.millisecondsSinceEpoch);
+      
+      if (index != -1) {
+        await _orderService.updateOrder(index, updatedOrder);
+        await _loadPreviousOrders();
+        
+        ref.read(analyticsRefreshProvider.notifier).state++;
+        
+        if (mounted) {
+          UtilService.showSuccessSnackBar(context, 'Order updated successfully');
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        UtilService.showErrorSnackBar(context, 'Failed to update order: $e');
       }
     }
   }
@@ -133,6 +153,18 @@ class _OrderPageState extends ConsumerState<OrderPage> {
         ),
 
         actions: [
+          IconButton(
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const OrderListPage(),
+                ),
+              );
+            },
+            icon: Icon(Icons.list_alt, color: AppTheme.primaryColor),
+            tooltip: 'View Orders',
+          ),
           IconButton(
             onPressed: () async {
               await Navigator.push(
@@ -713,7 +745,11 @@ class _OrderPageState extends ConsumerState<OrderPage> {
                                   return FadeInUp(
                                     duration: const Duration(milliseconds: 300),
                                     delay: Duration(milliseconds: index * 50),
-                                    child: PreviousOrderCard(order: order),
+                                    child: PreviousOrderCard(
+                                      order: order,
+                                      onUpdate: _updateOrder,
+                                      onRefresh: _loadPreviousOrders,
+                                    ),
                                   );
                                 },
                               ),
