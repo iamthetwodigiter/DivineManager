@@ -1,4 +1,3 @@
-// ignore_for_file: use_build_context_synchronously
 
 import 'package:animate_do/animate_do.dart';
 import 'package:divine_manager/core/services/util_service.dart';
@@ -170,7 +169,10 @@ class _MenuManagementPageState extends State<MenuManagementPage> {
               onPressed: () => Navigator.pop(context),
               child: Text(
                 'Cancel',
-                style: TextStyle(color: AppTheme.primaryRed),
+                style: TextStyle(
+                  color: AppTheme.errorColor,
+                  fontWeight: FontWeight.bold,
+                ),
               ),
             ),
             ElevatedButton(
@@ -455,7 +457,13 @@ class _MenuManagementPageState extends State<MenuManagementPage> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: Text('Cancel', style: TextStyle(color: AppTheme.primaryRed)),
+            child: Text(
+              'Cancel',
+              style: TextStyle(
+                color: AppTheme.errorColor,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
           ),
           ElevatedButton(
             onPressed: () async {

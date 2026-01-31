@@ -13,6 +13,62 @@ class AnalyticsService {
   }) : _orderService = orderService,
        _inventoryService = inventoryService;
 
+  Future<Map<String, dynamic>> getDailyBusinessMetrics(DateTime date) async {
+    final dayStart = DateTime(date.year, date.month, date.day);
+    final dayEnd = dayStart.add(const Duration(days: 1));
+    
+    final allOrders = await _orderService.getAllOrders();
+    final dayOrders = allOrders.where((order) => 
+      order.timestamp.isAfter(dayStart) && order.timestamp.isBefore(dayEnd)
+    ).toList();
+    
+    final totalRevenue = dayOrders.fold<double>(0, (sum, order) => sum + order.totalPrice);
+    final cashRevenue = dayOrders.where((o) => o.paymentMethod == 'Cash')
+        .fold<double>(0, (sum, order) => sum + order.totalPrice);
+    final upiRevenue = dayOrders.where((o) => o.paymentMethod == 'UPI')
+        .fold<double>(0, (sum, order) => sum + order.totalPrice);
+    
+    final totalItems = dayOrders.fold<int>(0, (sum, order) => 
+        sum + order.items.fold<int>(0, (itemSum, item) => itemSum + item.quantity));
+    
+    final avgOrderValue = dayOrders.isNotEmpty ? totalRevenue / dayOrders.length : 0.0;
+    
+    final hourlySales = <int, double>{};
+    for (int hour = 0; hour < 24; hour++) {
+      hourlySales[hour] = 0.0;
+    }
+    
+    for (final order in dayOrders) {
+      final hour = order.timestamp.hour;
+      hourlySales[hour] = (hourlySales[hour] ?? 0) + order.totalPrice;
+    }
+    
+    return {
+      'totalRevenue': totalRevenue,
+      'cashRevenue': cashRevenue,
+      'upiRevenue': upiRevenue,
+      'totalOrders': dayOrders.length,
+      'totalItems': totalItems,
+      'avgOrderValue': avgOrderValue,
+      'peakHour': _findPeakHour(hourlySales),
+      'hourlySales': hourlySales,
+    };
+  }
+  
+  int _findPeakHour(Map<int, double> hourlySales) {
+    var maxRevenue = 0.0;
+    var peakHour = 0;
+    
+    hourlySales.forEach((hour, revenue) {
+      if (revenue > maxRevenue) {
+        maxRevenue = revenue;
+        peakHour = hour;
+      }
+    });
+    
+    return peakHour;
+  }
+
   Future<List<SalesData>> getSalesData(AnalyticsPeriod period, [DateTimeRange? customRange]) async {
     final now = DateTime.now();
     List<SalesData> data = [];

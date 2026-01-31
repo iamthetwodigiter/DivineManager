@@ -1,4 +1,5 @@
 import 'package:animate_do/animate_do.dart';
+import 'package:divine_manager/core/services/util_service.dart';
 import 'package:divine_manager/core/theme/app_theme.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -49,12 +50,7 @@ class _AboutDevPageState extends State<AboutDevPage>
     final Uri url = Uri.parse('https://github.com/iamthetwodigiter');
     if (!await launchUrl(url)) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Unable to open GitHub link'),
-            backgroundColor: Colors.red,
-          ),
-        );
+        UtilService.showErrorSnackBar(context, 'Unable to open GitHub link');
       }
     }
   }
@@ -65,12 +61,7 @@ class _AboutDevPageState extends State<AboutDevPage>
     );
     if (!await launchUrl(url)) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Unable to open repository link'),
-            backgroundColor: Colors.orange,
-          ),
-        );
+        UtilService.showErrorSnackBar(context, 'Unable to open repository link');
       }
     }
   }
