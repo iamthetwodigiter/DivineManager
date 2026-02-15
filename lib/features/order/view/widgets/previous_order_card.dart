@@ -7,14 +7,132 @@ import 'package:flutter/material.dart';
 class PreviousOrderCard extends StatelessWidget {
   final Order order;
   final Function(Order)? onUpdate;
+  final Function(Order)? onDelete;
   final VoidCallback? onRefresh;
 
   const PreviousOrderCard({
     super.key,
     required this.order,
     this.onUpdate,
+    this.onDelete,
     this.onRefresh,
   });
+
+  void _showPaymentDialog(
+    BuildContext context,
+    String paymentMethod,
+    bool isDarkMode,
+    Order specificOrder,
+  ) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: isDarkMode
+            ? AppTheme.darkBackgroundColor
+            : AppTheme.cardColor,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Text(
+          'Confirm Payment',
+          style: TextStyle(fontWeight: FontWeight.w600),
+        ),
+        content: Text(
+          'Mark order #${specificOrder.id} as paid via $paymentMethod?',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text(
+              'Cancel',
+              style: TextStyle(
+                color: AppTheme.errorColor,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pop(context);
+              final updatedOrder = specificOrder.copyWith(
+                paymentMethod: paymentMethod,
+                status: 'completed',
+              );
+              if (onUpdate != null) {
+                onUpdate!(updatedOrder);
+              }
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: paymentMethod == 'Cash'
+                  ? AppTheme.primaryGreen
+                  : AppTheme.primaryBlue,
+              foregroundColor: AppTheme.cardColor,
+            ),
+            child: Text('Confirm $paymentMethod'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showDeleteDialog(BuildContext context) {
+    final isDarkMode = Theme.brightnessOf(context) == Brightness.dark;
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: isDarkMode
+            ? AppTheme.darkBackgroundColor
+            : AppTheme.cardColor,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Text(
+          'Delete Order',
+          style: TextStyle(fontWeight: FontWeight.w600),
+        ),
+        content: Text('Are you sure you want to delete order #${order.id}?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text(
+              'Cancel',
+              style: TextStyle(
+                color: AppTheme.primaryColor,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pop(context);
+              if (onDelete != null) {
+                onDelete!(order);
+              }
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppTheme.errorColor,
+              foregroundColor: AppTheme.cardColor,
+            ),
+            child: Text('Delete'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showOrderDetail(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (context) => OrderDetailDialog(
+        order: order,
+        isEdit: true,
+        onUpdate: (updatedOrder) {
+          if (onUpdate != null) {
+            onUpdate!(updatedOrder);
+          }
+          if (onRefresh != null) {
+            onRefresh!();
+          }
+        },
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -215,8 +333,12 @@ class PreviousOrderCard extends StatelessWidget {
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         GestureDetector(
-                          onTap: () =>
-                              _showPaymentDialog(context, 'Cash', isDarkMode),
+                          onTap: () => _showPaymentDialog(
+                            context,
+                            'Cash',
+                            isDarkMode,
+                            order,
+                          ),
                           child: Container(
                             padding: const EdgeInsets.symmetric(
                               horizontal: 8,
@@ -255,8 +377,12 @@ class PreviousOrderCard extends StatelessWidget {
                         ),
                         const SizedBox(width: 4),
                         GestureDetector(
-                          onTap: () =>
-                              _showPaymentDialog(context, 'UPI', isDarkMode),
+                          onTap: () => _showPaymentDialog(
+                            context,
+                            'UPI',
+                            isDarkMode,
+                            order,
+                          ),
                           child: Container(
                             padding: const EdgeInsets.symmetric(
                               horizontal: 8,
@@ -296,117 +422,89 @@ class PreviousOrderCard extends StatelessWidget {
                       ],
                     ),
                   const SizedBox(height: 4),
-                  GestureDetector(
-                    onTap: () => _showOrderDetail(context),
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 8,
-                        vertical: 4,
-                      ),
-                      decoration: BoxDecoration(
-                        color: AppTheme.primaryColor.withValues(alpha: 0.1),
-                        borderRadius: BorderRadius.circular(4),
-                        border: Border.all(
-                          color: AppTheme.primaryColor,
-                          width: 1,
-                        ),
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(
-                            Icons.edit,
-                            size: 12,
-                            color: AppTheme.primaryColor,
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      GestureDetector(
+                        onTap: () => _showOrderDetail(context),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 4,
                           ),
-                          const SizedBox(width: 2),
-                          Text(
-                            'Update',
-                            style: TextStyle(
-                              fontSize: 10,
+                          decoration: BoxDecoration(
+                            color: AppTheme.primaryColor.withValues(alpha: 0.1),
+                            borderRadius: BorderRadius.circular(4),
+                            border: Border.all(
                               color: AppTheme.primaryColor,
-                              fontWeight: FontWeight.w500,
+                              width: 1,
                             ),
                           ),
-                        ],
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                Icons.edit,
+                                size: 12,
+                                color: AppTheme.primaryColor,
+                              ),
+                              const SizedBox(width: 2),
+                              Text(
+                                'Update',
+                                style: TextStyle(
+                                  fontSize: 10,
+                                  color: AppTheme.primaryColor,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
                       ),
-                    ),
+                      const SizedBox(width: 4),
+                      GestureDetector(
+                        onTap: () => _showDeleteDialog(context),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 4,
+                          ),
+                          decoration: BoxDecoration(
+                            color: AppTheme.errorColor.withValues(alpha: 0.1),
+                            borderRadius: BorderRadius.circular(4),
+                            border: Border.all(
+                              color: AppTheme.errorColor,
+                              width: 1,
+                            ),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                Icons.delete,
+                                size: 12,
+                                color: AppTheme.errorColor,
+                              ),
+                              const SizedBox(width: 2),
+                              Text(
+                                'Delete',
+                                style: TextStyle(
+                                  fontSize: 10,
+                                  color: AppTheme.errorColor,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                 ],
               ),
             ],
           ),
         ],
-      ),
-    );
-  }
-
-  void _showPaymentDialog(
-    BuildContext context,
-    String paymentMethod,
-    bool isDarkMode,
-  ) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        backgroundColor: isDarkMode
-            ? AppTheme.darkBackgroundColor
-            : AppTheme.cardColor,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: Text(
-          'Confirm Payment',
-          style: TextStyle(fontWeight: FontWeight.w600),
-        ),
-        content: Text('Mark this order as paid via $paymentMethod?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: Text(
-              'Cancel',
-              style: TextStyle(
-                color: AppTheme.errorColor,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              Navigator.pop(context);
-              final updatedOrder = order.copyWith(
-                paymentMethod: paymentMethod,
-                status: 'completed',
-              );
-              if (onUpdate != null) {
-                onUpdate!(updatedOrder);
-              }
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: paymentMethod == 'Cash'
-                  ? AppTheme.primaryGreen
-                  : AppTheme.primaryBlue,
-              foregroundColor: AppTheme.cardColor,
-            ),
-            child: Text('Confirm $paymentMethod'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _showOrderDetail(BuildContext context) {
-    showDialog(
-      context: context,
-      builder: (context) => OrderDetailDialog(
-        order: order,
-        isEdit: true,
-        onUpdate: (updatedOrder) {
-          if (onUpdate != null) {
-            onUpdate!(updatedOrder);
-          }
-          if (onRefresh != null) {
-            onRefresh!();
-          }
-        },
       ),
     );
   }

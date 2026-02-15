@@ -1,5 +1,6 @@
 import 'package:animate_do/animate_do.dart';
 import 'package:divine_manager/core/services/util_service.dart';
+import 'package:divine_manager/core/services/hive_service.dart';
 import 'package:divine_manager/features/analytics/providers/analytics_providers.dart';
 import 'package:divine_manager/features/order/constants/constants.dart';
 import 'package:divine_manager/core/theme/app_theme.dart';
@@ -87,8 +88,9 @@ class _OrderPageState extends ConsumerState<OrderPage> {
   Future<void> _placeOrder() async {
     if (currentOrder.isNotEmpty) {
       try {
+        final orderId = await _orderService.generateOrderId();
         final order = Order(
-          id: _orderService.generateOrderId(),
+          id: orderId,
           items: List.from(currentOrder),
           timestamp: DateTime.now(),
           totalPrice: _calculateTotal(),
@@ -120,24 +122,74 @@ class _OrderPageState extends ConsumerState<OrderPage> {
 
   Future<void> _updateOrder(Order updatedOrder) async {
     try {
-      final allOrders = await _orderService.getAllOrders();
-      final index = allOrders.indexWhere((o) => 
-          o.id == updatedOrder.id && 
-          o.timestamp.millisecondsSinceEpoch == updatedOrder.timestamp.millisecondsSinceEpoch);
-      
-      if (index != -1) {
-        await _orderService.updateOrder(index, updatedOrder);
+      final box = HiveService.ordersBox;
+      dynamic orderKey;
+
+      // Find the order key by matching id and timestamp
+      for (var key in box.keys) {
+        final order = box.get(key);
+        if (order != null &&
+            order.id == updatedOrder.id &&
+            order.timestamp.millisecondsSinceEpoch ==
+                updatedOrder.timestamp.millisecondsSinceEpoch) {
+          orderKey = key;
+          break;
+        }
+      }
+
+      if (orderKey != null) {
+        await _orderService.updateOrderByKey(orderKey, updatedOrder);
         await _loadPreviousOrders();
-        
+
         ref.read(analyticsRefreshProvider.notifier).state++;
-        
+
         if (mounted) {
-          UtilService.showSuccessSnackBar(context, 'Order updated successfully');
+          UtilService.showSuccessSnackBar(
+            context,
+            'Order updated successfully',
+          );
         }
       }
     } catch (e) {
       if (mounted) {
         UtilService.showErrorSnackBar(context, 'Failed to update order: $e');
+      }
+    }
+  }
+
+  Future<void> _deleteOrder(Order orderToDelete) async {
+    try {
+      final box = HiveService.ordersBox;
+      dynamic orderKey;
+
+      // Find the order key by matching id and timestamp
+      for (var key in box.keys) {
+        final order = box.get(key);
+        if (order != null &&
+            order.id == orderToDelete.id &&
+            order.timestamp.millisecondsSinceEpoch ==
+                orderToDelete.timestamp.millisecondsSinceEpoch) {
+          orderKey = key;
+          break;
+        }
+      }
+
+      if (orderKey != null) {
+        await _orderService.deleteOrderByKey(orderKey);
+        await _loadPreviousOrders();
+
+        ref.read(analyticsRefreshProvider.notifier).state++;
+
+        if (mounted) {
+          UtilService.showSuccessSnackBar(
+            context,
+            'Order deleted successfully',
+          );
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        UtilService.showErrorSnackBar(context, 'Failed to delete order: $e');
       }
     }
   }
@@ -157,9 +209,7 @@ class _OrderPageState extends ConsumerState<OrderPage> {
             onPressed: () {
               Navigator.push(
                 context,
-                MaterialPageRoute(
-                  builder: (context) => const OrderListPage(),
-                ),
+                MaterialPageRoute(builder: (context) => const OrderListPage()),
               );
             },
             icon: Icon(Icons.list_alt, color: AppTheme.primaryColor),
@@ -196,7 +246,9 @@ class _OrderPageState extends ConsumerState<OrderPage> {
                   boxShadow: !isDarkMode
                       ? [
                           BoxShadow(
-                            color: AppTheme.primaryColor.withValues(alpha: 0.08),
+                            color: AppTheme.primaryColor.withValues(
+                              alpha: 0.08,
+                            ),
                             blurRadius: 10,
                             offset: const Offset(0, 4),
                           ),
@@ -208,20 +260,24 @@ class _OrderPageState extends ConsumerState<OrderPage> {
                   children: [
                     Text(
                       'Create New Order',
-                      style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.w600,
+                      ),
                     ),
                     const SizedBox(height: 16),
-        
+
                     if (currentOrder.isNotEmpty) ...[
                       ...currentOrder.asMap().entries.map((entry) {
                         final index = entry.key;
                         final orderItem = entry.value;
                         return OrderItemCard(
                           orderItem: orderItem,
-                          removeItemFromOrder: () => _removeItemFromOrder(index),
+                          removeItemFromOrder: () =>
+                              _removeItemFromOrder(index),
                         );
                       }),
-        
+
                       Container(
                         margin: const EdgeInsets.only(top: 8),
                         padding: const EdgeInsets.all(8),
@@ -252,7 +308,7 @@ class _OrderPageState extends ConsumerState<OrderPage> {
                       ),
                       const SizedBox(height: 16),
                     ],
-        
+
                     Row(
                       children: [
                         Expanded(
@@ -376,7 +432,7 @@ class _OrderPageState extends ConsumerState<OrderPage> {
                                           ),
                                         ),
                                         const SizedBox(width: 8),
-        
+
                                         Container(
                                           width: 6,
                                           height: 6,
@@ -388,7 +444,7 @@ class _OrderPageState extends ConsumerState<OrderPage> {
                                           ),
                                         ),
                                         const SizedBox(width: 8),
-        
+
                                         Flexible(
                                           flex: 5,
                                           child: Column(
@@ -406,7 +462,9 @@ class _OrderPageState extends ConsumerState<OrderPage> {
                                                 maxLines: 1,
                                               ),
                                               Text(
-                                                item.isNonVeg ? 'Non-Veg' : 'Veg',
+                                                item.isNonVeg
+                                                    ? 'Non-Veg'
+                                                    : 'Veg',
                                                 style: TextStyle(
                                                   fontSize: 9,
                                                   fontWeight: FontWeight.w400,
@@ -457,13 +515,16 @@ class _OrderPageState extends ConsumerState<OrderPage> {
                                         width: 20,
                                         height: 20,
                                         decoration: BoxDecoration(
-                                          color: AppTheme.primaryColor.withValues(
-                                            alpha: 0.1,
+                                          color: AppTheme.primaryColor
+                                              .withValues(alpha: 0.1),
+                                          borderRadius: BorderRadius.circular(
+                                            4,
                                           ),
-                                          borderRadius: BorderRadius.circular(4),
                                         ),
                                         child: ClipRRect(
-                                          borderRadius: BorderRadius.circular(4),
+                                          borderRadius: BorderRadius.circular(
+                                            4,
+                                          ),
                                           child: Image.asset(
                                             item.assetPath,
                                             fit: BoxFit.cover,
@@ -471,7 +532,8 @@ class _OrderPageState extends ConsumerState<OrderPage> {
                                                 (context, error, stackTrace) {
                                                   return Icon(
                                                     Icons.fastfood_rounded,
-                                                    color: AppTheme.primaryColor,
+                                                    color:
+                                                        AppTheme.primaryColor,
                                                     size: 12,
                                                   );
                                                 },
@@ -518,11 +580,13 @@ class _OrderPageState extends ConsumerState<OrderPage> {
                           ),
                         ),
                         const SizedBox(width: 12),
-        
+
                         Container(
                           decoration: BoxDecoration(
                             border: Border.all(
-                              color: AppTheme.primaryColor.withValues(alpha: 0.3),
+                              color: AppTheme.primaryColor.withValues(
+                                alpha: 0.3,
+                              ),
                             ),
                             borderRadius: BorderRadius.circular(8),
                           ),
@@ -577,7 +641,7 @@ class _OrderPageState extends ConsumerState<OrderPage> {
                       ],
                     ),
                     const SizedBox(height: 16),
-        
+
                     Row(
                       children: [
                         if (currentOrder.isNotEmpty)
@@ -603,9 +667,9 @@ class _OrderPageState extends ConsumerState<OrderPage> {
                               ),
                             ),
                           ),
-        
+
                         if (currentOrder.isNotEmpty) const SizedBox(width: 12),
-        
+
                         SizedBox(
                           height: 48,
                           child: ElevatedButton(
@@ -630,7 +694,9 @@ class _OrderPageState extends ConsumerState<OrderPage> {
                                   .withValues(alpha: 0.3),
                               disabledBackgroundColor: AppTheme.primaryColor
                                   .withValues(alpha: 0.3),
-                              padding: const EdgeInsets.symmetric(horizontal: 16),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 16,
+                              ),
                             ),
                             child: Text(
                               'Add Item',
@@ -647,9 +713,9 @@ class _OrderPageState extends ConsumerState<OrderPage> {
                   ],
                 ),
               ),
-        
+
               const SizedBox(height: 20),
-        
+
               Expanded(
                 child: Container(
                   width: double.infinity,
@@ -708,7 +774,7 @@ class _OrderPageState extends ConsumerState<OrderPage> {
                         ],
                       ),
                       const SizedBox(height: 16),
-        
+
                       Expanded(
                         child: previousOrders.isEmpty
                             ? Center(
@@ -748,6 +814,7 @@ class _OrderPageState extends ConsumerState<OrderPage> {
                                     child: PreviousOrderCard(
                                       order: order,
                                       onUpdate: _updateOrder,
+                                      onDelete: _deleteOrder,
                                       onRefresh: _loadPreviousOrders,
                                     ),
                                   );

@@ -52,22 +52,38 @@ class OrderService {
     );
   }
 
-  String generateOrderId() {
+  Future<String> generateOrderId() async {
     final now = DateTime.now();
     final today = DateTime(now.year, now.month, now.day);
-    final todayOrders = _getOrdersForDate(today);
+    final todayOrders = await _getOrdersForDateAsync(today);
     return (todayOrders.length + 1).toString();
+  }
+
+  Future<List<Order>> _getOrdersForDateAsync(DateTime date) async {
+    final box = HiveService.ordersBox;
+    final startOfDay = DateTime(date.year, date.month, date.day);
+    final endOfDay = startOfDay.add(const Duration(days: 1));
+
+    return box.values
+        .where(
+          (order) =>
+              order.timestamp.isAfter(startOfDay) &&
+              order.timestamp.isBefore(endOfDay),
+        )
+        .toList();
   }
 
   List<Order> _getOrdersForDate(DateTime date) {
     final box = HiveService.ordersBox;
     final startOfDay = DateTime(date.year, date.month, date.day);
     final endOfDay = startOfDay.add(const Duration(days: 1));
-    
+
     return box.values
-        .where((order) =>
-            order.timestamp.isAfter(startOfDay) &&
-            order.timestamp.isBefore(endOfDay))
+        .where(
+          (order) =>
+              order.timestamp.isAfter(startOfDay) &&
+              order.timestamp.isBefore(endOfDay),
+        )
         .toList();
   }
 
@@ -97,12 +113,12 @@ class OrderService {
   Future<Map<String, double>> getRevenueByPaymentMethod() async {
     final orders = await getAllOrders();
     final Map<String, double> revenueByMethod = {};
-    
+
     for (final order in orders) {
-      revenueByMethod[order.paymentMethod] = 
+      revenueByMethod[order.paymentMethod] =
           (revenueByMethod[order.paymentMethod] ?? 0) + order.totalPrice;
     }
-    
+
     return revenueByMethod;
   }
 }

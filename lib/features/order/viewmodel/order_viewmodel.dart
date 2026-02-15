@@ -57,8 +57,8 @@ class OrderViewModel {
     await _orderService.deleteOrder(index);
   }
 
-  String generateOrderId() {
-    return _orderService.generateOrderId();
+  Future<String> generateOrderId() async {
+    return await _orderService.generateOrderId();
   }
 
   List<OrderItem> addItemToCurrentOrder(
