@@ -12,7 +12,7 @@ enum AnalyticsPeriod {
   @HiveField(3)
   yearly,
   @HiveField(4)
-  custom
+  custom,
 }
 
 @HiveType(typeId: 7)
@@ -22,7 +22,7 @@ enum AnalyticsType {
   @HiveField(1)
   inventory,
   @HiveField(2)
-  revenue
+  revenue,
 }
 
 @HiveType(typeId: 8)
@@ -98,6 +98,8 @@ class OrderAnalytics {
 class InventoryAnalytics {
   final String itemName;
   final double currentStock;
+  final double lowStockThreshold;
+  final bool isLowStock;
   final double stockUsed;
   final double stockValue;
   final int timesOrdered;
@@ -105,9 +107,39 @@ class InventoryAnalytics {
   InventoryAnalytics({
     required this.itemName,
     required this.currentStock,
+    required this.lowStockThreshold,
+    required this.isLowStock,
     required this.stockUsed,
     required this.stockValue,
     required this.timesOrdered,
+  });
+}
+
+class CashFlowData {
+  final DateTime date;
+  final double cashInflow; // Money coming in (completed orders)
+  final double cashOutflow; // Money going out (expenses, refunds)
+  final double netCashFlow; // Net cash flow (inflow - outflow)
+  final double cumulativeCash; // Running total of cash
+
+  CashFlowData({
+    required this.date,
+    required this.cashInflow,
+    required this.cashOutflow,
+    required this.netCashFlow,
+    required this.cumulativeCash,
+  });
+}
+
+class PaymentMethodBreakdown {
+  final String method;
+  final double amount;
+  final int orderCount;
+
+  PaymentMethodBreakdown({
+    required this.method,
+    required this.amount,
+    required this.orderCount,
   });
 }
 

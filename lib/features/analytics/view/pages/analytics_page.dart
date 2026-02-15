@@ -3,7 +3,10 @@ import 'package:divine_manager/core/services/util_service.dart';
 import 'package:divine_manager/core/theme/app_theme.dart';
 import 'package:divine_manager/core/widgets/custom_form_widgets.dart';
 import 'package:divine_manager/features/analytics/model/analytics_model.dart';
+import 'package:divine_manager/features/analytics/service/analytics_service.dart';
 import 'package:divine_manager/features/analytics/providers/analytics_providers.dart';
+import 'package:divine_manager/features/order/services/order_service.dart';
+import 'package:divine_manager/features/inventory/services/inventory_service.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -291,6 +294,328 @@ class _AnalyticsPageState extends ConsumerState<AnalyticsPage> {
     );
   }
 
+  Widget _buildCashFlowSection(
+    AnalyticsPeriod period,
+    DateTimeRange? customRange,
+  ) {
+    return FadeInUp(
+      duration: const Duration(milliseconds: 600),
+      delay: const Duration(milliseconds: 300),
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(20),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: AppTheme.primaryColor.withValues(alpha: 0.2),
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: AppTheme.primaryColor.withValues(alpha: 0.08),
+              blurRadius: 10,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(
+                  Icons.trending_up_rounded,
+                  color: AppTheme.primaryColor,
+                  size: 24,
+                ),
+                const SizedBox(width: 8),
+                Text(
+                  'Cash Flow Analysis',
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
+                ),
+              ],
+            ),
+            const SizedBox(height: 20),
+            FutureBuilder<List<CashFlowData>>(
+              future: _getCashFlowData(period, customRange),
+              builder: (context, snapshot) {
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return const SizedBox(
+                    height: 200,
+                    child: Center(child: CircularProgressIndicator()),
+                  );
+                }
+
+                if (snapshot.hasError) {
+                  return Container(
+                    height: 200,
+                    child: Center(
+                      child: Text(
+                        'Error loading cash flow data',
+                        style: TextStyle(color: AppTheme.errorColor),
+                      ),
+                    ),
+                  );
+                }
+
+                final cashFlowData = snapshot.data ?? [];
+                if (cashFlowData.isEmpty) {
+                  return Container(
+                    height: 200,
+                    child: Center(
+                      child: Text(
+                        'No cash flow data available',
+                        style: TextStyle(fontSize: 16),
+                      ),
+                    ),
+                  );
+                }
+
+                return Column(
+                  children: [
+                    // Cash flow overview cards
+                    Row(
+                      children: [
+                        Expanded(
+                          child: _cashFlowCard(
+                            'Total Inflow',
+                            cashFlowData.fold<double>(
+                              0,
+                              (sum, data) => sum + data.cashInflow,
+                            ),
+                            Icons.arrow_downward,
+                            AppTheme.primaryGreen,
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: _cashFlowCard(
+                            'Net Cash Flow',
+                            cashFlowData.fold<double>(
+                              0,
+                              (sum, data) => sum + data.netCashFlow,
+                            ),
+                            Icons.account_balance_wallet,
+                            AppTheme.primaryBlue,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 20),
+                    // Cash flow chart
+                    SizedBox(
+                      height: 200,
+                      child: LineChart(
+                        LineChartData(
+                          gridData: FlGridData(
+                            show: true,
+                            drawVerticalLine: false,
+                            horizontalInterval:
+                                _getMaxCashFlow(cashFlowData) / 5,
+                            getDrawingHorizontalLine: (value) {
+                              return FlLine(
+                                color: AppTheme.primaryColor.withValues(
+                                  alpha: 0.1,
+                                ),
+                                strokeWidth: 1,
+                              );
+                            },
+                          ),
+                          titlesData: FlTitlesData(
+                            leftTitles: AxisTitles(
+                              sideTitles: SideTitles(
+                                showTitles: true,
+                                reservedSize: 50,
+                                getTitlesWidget: (value, meta) {
+                                  return Text(
+                                    '₹${(value / 1000).toStringAsFixed(0)}K',
+                                    style: TextStyle(fontSize: 10),
+                                  );
+                                },
+                              ),
+                            ),
+                            bottomTitles: AxisTitles(
+                              sideTitles: SideTitles(
+                                showTitles: true,
+                                reservedSize: 30,
+                                getTitlesWidget: (value, meta) {
+                                  final index = value.toInt();
+                                  if (index >= 0 &&
+                                      index < cashFlowData.length) {
+                                    final date = cashFlowData[index].date;
+                                    return Padding(
+                                      padding: const EdgeInsets.only(top: 15.0),
+                                      child: Text(
+                                        _formatChartDate(date, period),
+                                        style: TextStyle(fontSize: 12),
+                                      ),
+                                    );
+                                  }
+                                  return const Text('');
+                                },
+                              ),
+                            ),
+                            rightTitles: AxisTitles(
+                              sideTitles: SideTitles(showTitles: false),
+                            ),
+                            topTitles: AxisTitles(
+                              sideTitles: SideTitles(showTitles: false),
+                            ),
+                          ),
+                          borderData: FlBorderData(show: false),
+                          lineBarsData: [
+                            // Cash inflow line
+                            LineChartBarData(
+                              spots: cashFlowData.asMap().entries.map((entry) {
+                                return FlSpot(
+                                  entry.key.toDouble(),
+                                  entry.value.cashInflow,
+                                );
+                              }).toList(),
+                              isCurved: true,
+                              color: AppTheme.primaryGreen,
+                              barWidth: 3,
+                              isStrokeCapRound: true,
+                              dotData: FlDotData(
+                                show: true,
+                                getDotPainter: (spot, percent, barData, index) {
+                                  return FlDotCirclePainter(
+                                    radius: 3,
+                                    color: AppTheme.primaryGreen,
+                                    strokeWidth: 1,
+                                    strokeColor: AppTheme.cardColor,
+                                  );
+                                },
+                              ),
+                            ),
+                            // Net cash flow line
+                            LineChartBarData(
+                              spots: cashFlowData.asMap().entries.map((entry) {
+                                return FlSpot(
+                                  entry.key.toDouble(),
+                                  entry.value.netCashFlow,
+                                );
+                              }).toList(),
+                              isCurved: true,
+                              color: AppTheme.primaryBlue,
+                              barWidth: 3,
+                              isStrokeCapRound: true,
+                              belowBarData: BarAreaData(
+                                show: true,
+                                color: AppTheme.primaryBlue.withValues(
+                                  alpha: 0.1,
+                                ),
+                              ),
+                              dotData: FlDotData(
+                                show: true,
+                                getDotPainter: (spot, percent, barData, index) {
+                                  return FlDotCirclePainter(
+                                    radius: 3,
+                                    color: AppTheme.primaryBlue,
+                                    strokeWidth: 1,
+                                    strokeColor: AppTheme.cardColor,
+                                  );
+                                },
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    // Legend
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        _legendItem('Cash Inflow', AppTheme.primaryGreen),
+                        const SizedBox(width: 20),
+                        _legendItem('Net Cash Flow', AppTheme.primaryBlue),
+                      ],
+                    ),
+                  ],
+                );
+              },
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _cashFlowCard(String title, double value, IconData icon, Color color) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.05),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: color.withValues(alpha: 0.2)),
+      ),
+      child: Column(
+        children: [
+          Icon(icon, color: color, size: 24),
+          const SizedBox(height: 8),
+          Text(
+            '₹${value.toStringAsFixed(0)}',
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+              color: color,
+            ),
+          ),
+          Text(
+            title,
+            style: TextStyle(fontSize: 12, fontWeight: FontWeight.w500),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _legendItem(String label, Color color) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Container(
+          width: 12,
+          height: 3,
+          decoration: BoxDecoration(
+            color: color,
+            borderRadius: BorderRadius.circular(1.5),
+          ),
+        ),
+        const SizedBox(width: 6),
+        Text(
+          label,
+          style: TextStyle(fontSize: 12, fontWeight: FontWeight.w500),
+        ),
+      ],
+    );
+  }
+
+  Future<List<CashFlowData>> _getCashFlowData(
+    AnalyticsPeriod period,
+    DateTimeRange? customRange,
+  ) async {
+    final analyticsService = AnalyticsService(
+      orderService: OrderService(),
+      inventoryService: InventoryService(),
+    );
+    return analyticsService.getCashFlowData(period, customRange);
+  }
+
+  double _getMaxCashFlow(List<CashFlowData> cashFlowData) {
+    if (cashFlowData.isEmpty) return 1000.0;
+
+    final maxInflow = cashFlowData
+        .map((data) => data.cashInflow)
+        .reduce((a, b) => a > b ? a : b);
+    final maxNet = cashFlowData
+        .map((data) => data.netCashFlow)
+        .reduce((a, b) => a > b ? a : b);
+    final max = maxInflow > maxNet ? maxInflow : maxNet;
+
+    return max > 0 ? max : 1000.0;
+  }
+
   Widget _buildTopItemsWidget(
     BuildContext context,
     List<OrderAnalytics> topItems,
@@ -450,7 +775,9 @@ class _AnalyticsPageState extends ConsumerState<AnalyticsPage> {
                           vertical: 4,
                         ),
                         decoration: BoxDecoration(
-                          color: UtilService.getRankColor(index).withValues(alpha: 0.1),
+                          color: UtilService.getRankColor(
+                            index,
+                          ).withValues(alpha: 0.1),
                           borderRadius: BorderRadius.circular(6),
                         ),
                         child: Text(
@@ -839,7 +1166,8 @@ class _AnalyticsPageState extends ConsumerState<AnalyticsPage> {
       await SharePlus.instance.share(
         ShareParams(
           text: 'Divine Manager Analytics Report',
-          subject: 'Analytics Export - ${viewModel.formatPeriodDisplayName(selectedPeriod)}',
+          subject:
+              'Analytics Export - ${viewModel.formatPeriodDisplayName(selectedPeriod)}',
           files: [XFile(file.path)],
         ),
       );
@@ -852,10 +1180,7 @@ class _AnalyticsPageState extends ConsumerState<AnalyticsPage> {
       }
     } catch (e) {
       if (mounted) {
-        UtilService.showErrorSnackBar(
-          context,
-          'Error exporting data: $e',
-        );
+        UtilService.showErrorSnackBar(context, 'Error exporting data: $e');
       }
     }
   }
@@ -1258,10 +1583,7 @@ class _AnalyticsPageState extends ConsumerState<AnalyticsPage> {
               const SizedBox(width: 8),
               Text(
                 title,
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w600,
-                ),
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
               ),
             ],
           ),
@@ -1321,17 +1643,12 @@ class _AnalyticsPageState extends ConsumerState<AnalyticsPage> {
           const SizedBox(height: 16),
           Text(
             'No sales data available',
-            style: TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.w500,
-            ),
+            style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
           ),
           const SizedBox(height: 8),
           Text(
             'Start placing orders to see analytics',
-            style: TextStyle(
-              fontSize: 14,
-            ),
+            style: TextStyle(fontSize: 14),
           ),
         ],
       ),
@@ -1561,6 +1878,10 @@ class _AnalyticsPageState extends ConsumerState<AnalyticsPage> {
                 error: (error, stack) =>
                     _buildErrorWidget('Failed to load sales data'),
               ),
+              const SizedBox(height: 20),
+
+              // Cash Flow Analysis Section
+              _buildCashFlowSection(selectedPeriod, customDateRange),
               const SizedBox(height: 20),
 
               Column(
