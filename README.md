@@ -335,11 +335,21 @@ Divine Manager combines **functionality with aesthetics**, featuring:
 
 ## 🔄 Version History
 
+- **v1.1.0** - UI/UX Enhancement Update
+  - Redesigned order detail dialog with improved layout
+  - Implemented filter chips for payment method and status selection
+  - Fixed overflow issues and improved responsive design
+  - Standardized button styling with 12px border radius
+  - Complete theme compliance (removed hardcoded colors)
+  - Enhanced visual feedback and user interactions
+
 - **v1.0.0** - Initial release with core features
   - Analytics dashboard
   - Inventory management
   - Order processing
   - Export functionality
+
+> 📝 For detailed changelog, see [UPDATE.md](UPDATE.md)
 
 ---
 
