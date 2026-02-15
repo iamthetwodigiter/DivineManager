@@ -346,7 +346,7 @@ class _AnalyticsPageState extends ConsumerState<AnalyticsPage> {
                 }
 
                 if (snapshot.hasError) {
-                  return Container(
+                  return SizedBox(
                     height: 200,
                     child: Center(
                       child: Text(
@@ -359,7 +359,7 @@ class _AnalyticsPageState extends ConsumerState<AnalyticsPage> {
 
                 final cashFlowData = snapshot.data ?? [];
                 if (cashFlowData.isEmpty) {
-                  return Container(
+                  return SizedBox(
                     height: 200,
                     child: Center(
                       child: Text(

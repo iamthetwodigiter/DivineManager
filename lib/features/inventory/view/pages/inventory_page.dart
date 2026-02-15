@@ -1,4 +1,6 @@
 
+// ignore_for_file: use_build_context_synchronously
+
 import 'package:animate_do/animate_do.dart';
 import 'package:divine_manager/core/services/util_service.dart';
 import 'package:divine_manager/core/theme/app_theme.dart';
