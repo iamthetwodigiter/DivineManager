@@ -25,9 +25,16 @@ class OrderListCard extends StatelessWidget {
     final timeString =
         '${order.timestamp.hour}:${order.timestamp.minute.toString().padLeft(2, '0')}';
 
+    final isDarkMode = Theme.brightnessOf(context) == Brightness.dark;
+
     return Card(
       margin: const EdgeInsets.only(bottom: 12),
-      elevation: 2,
+      color: isDarkMode ? AppTheme.darkBackgroundColor : AppTheme.cardColor,
+      shape: RoundedRectangleBorder(
+        side: BorderSide(color: AppTheme.primaryColor),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      shadowColor: AppTheme.primaryColor,
       child: InkWell(
         onTap: onTap,
         borderRadius: BorderRadius.circular(12),
@@ -50,7 +57,7 @@ class OrderListCard extends StatelessWidget {
                     child: Text(
                       'Order #${order.id}',
                       style: const TextStyle(
-                        color: AppTheme.cardColor,
+                        color: AppTheme.primaryColor,
                         fontWeight: FontWeight.bold,
                         fontSize: 12,
                       ),
@@ -60,6 +67,13 @@ class OrderListCard extends StatelessWidget {
                   Text(timeString, style: TextStyle(fontSize: 12)),
                   const SizedBox(width: 8),
                   PopupMenuButton(
+                    color: isDarkMode
+                        ? AppTheme.darkBackgroundColor
+                        : AppTheme.cardColor,
+                    shape: RoundedRectangleBorder(
+                      side: BorderSide(color: AppTheme.primaryColor),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
                     icon: const Icon(Icons.more_vert, size: 20),
                     itemBuilder: (context) => [
                       PopupMenuItem(

@@ -1,5 +1,7 @@
 import 'package:divine_manager/core/theme/app_theme.dart';
 import 'package:divine_manager/features/order/model/order.dart';
+import 'package:divine_manager/features/order/model/menu_items.dart';
+import 'package:divine_manager/features/order/constants/constants.dart';
 import 'package:flutter/material.dart';
 
 class OrderDetailDialog extends StatefulWidget {
@@ -22,6 +24,8 @@ class _OrderDetailDialogState extends State<OrderDetailDialog> {
   late List<OrderItem> editableItems;
   late String selectedPaymentMethod;
   late String selectedStatus;
+  MenuItems? selectedNewItem;
+  int selectedNewQuantity = 1;
 
   @override
   void initState() {
@@ -55,6 +59,32 @@ class _OrderDetailDialogState extends State<OrderDetailDialog> {
     }
   }
 
+  void _addNewItemToOrder() {
+    if (selectedNewItem != null) {
+      setState(() {
+        int existingIndex = editableItems.indexWhere(
+          (orderItem) => orderItem.item.name == selectedNewItem!.name,
+        );
+
+        if (existingIndex != -1) {
+          final existingItem = editableItems[existingIndex];
+          final newOrderItem = OrderItem(
+            item: existingItem.item,
+            quantity: existingItem.quantity + selectedNewQuantity,
+          );
+          editableItems[existingIndex] = newOrderItem;
+        } else {
+          editableItems.add(
+            OrderItem(item: selectedNewItem!, quantity: selectedNewQuantity),
+          );
+        }
+
+        selectedNewItem = null;
+        selectedNewQuantity = 1;
+      });
+    }
+  }
+
   void _saveChanges() {
     if (editableItems.isNotEmpty) {
       final updatedOrder = widget.order.copyWith(
@@ -66,357 +96,6 @@ class _OrderDetailDialogState extends State<OrderDetailDialog> {
       widget.onUpdate(updatedOrder);
       Navigator.pop(context);
     }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final isDarkMode = Theme.brightnessOf(context) == Brightness.dark;
-    final size = MediaQuery.sizeOf(context);
-    return Dialog(
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(16),
-        side: BorderSide(color: AppTheme.primaryColor),
-      ),
-      backgroundColor: isDarkMode
-          ? AppTheme.darkBackgroundColor
-          : AppTheme.cardColor,
-      child: Container(
-        width: size.width * 0.9,
-        constraints: BoxConstraints(
-          maxHeight: size.height * 0.85,
-          maxWidth: 500,
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              padding: const EdgeInsets.all(20),
-              decoration: BoxDecoration(
-                color: AppTheme.primaryColor,
-                borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
-              ),
-              child: Row(
-                children: [
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Order #${widget.order.id}',
-                        style: TextStyle(
-                          fontSize: 20,
-                          fontWeight: FontWeight.bold,
-                          color: AppTheme.cardColor,
-                        ),
-                      ),
-                      Text(
-                        '${widget.order.timestamp.day}/${widget.order.timestamp.month}/${widget.order.timestamp.year} at ${widget.order.timestamp.hour}:${widget.order.timestamp.minute.toString().padLeft(2, '0')}',
-                        style: TextStyle(
-                          fontSize: 14,
-                          color: AppTheme.cardColor,
-                        ),
-                      ),
-                    ],
-                  ),
-                  const Spacer(),
-                  IconButton(
-                    icon: Icon(Icons.close, color: AppTheme.cardColor),
-                    onPressed: () => Navigator.pop(context),
-                  ),
-                ],
-              ),
-            ),
-
-            Expanded(
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.all(20),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    if (widget.isEdit) ...[
-                      Row(
-                        children: [
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                const Text(
-                                  'Payment Method',
-                                  style: TextStyle(fontWeight: FontWeight.w500),
-                                ),
-                                const SizedBox(height: 8),
-                                DropdownButtonFormField<String>(
-                                  initialValue: selectedPaymentMethod,
-                                  decoration: InputDecoration(
-                                    border: OutlineInputBorder(
-                                      borderRadius: BorderRadius.circular(8),
-                                      borderSide: BorderSide(
-                                        color: AppTheme.primaryColor.withValues(
-                                          alpha: 0.3,
-                                        ),
-                                      ),
-                                    ),
-                                    enabledBorder: OutlineInputBorder(
-                                      borderRadius: BorderRadius.circular(8),
-                                      borderSide: BorderSide(
-                                        color: AppTheme.primaryColor.withValues(
-                                          alpha: 0.3,
-                                        ),
-                                      ),
-                                    ),
-                                    focusedBorder: OutlineInputBorder(
-                                      borderRadius: BorderRadius.circular(8),
-                                      borderSide: BorderSide(
-                                        color: AppTheme.primaryColor,
-                                        width: 2,
-                                      ),
-                                    ),
-                                    contentPadding: const EdgeInsets.symmetric(
-                                      horizontal: 12,
-                                      vertical: 8,
-                                    ),
-                                  ),
-                                  dropdownColor: isDarkMode
-                                      ? AppTheme.darkBackgroundColor
-                                      : AppTheme.cardColor,
-                                  items: ['Cash', 'UPI']
-                                      .map(
-                                        (method) => DropdownMenuItem(
-                                          value: method,
-                                          child: Text(method),
-                                        ),
-                                      )
-                                      .toList(),
-                                  onChanged: (value) {
-                                    setState(
-                                      () => selectedPaymentMethod = value!,
-                                    );
-                                  },
-                                ),
-                              ],
-                            ),
-                          ),
-                          const SizedBox(width: 16),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                const Text(
-                                  'Status',
-                                  style: TextStyle(fontWeight: FontWeight.w500),
-                                ),
-                                const SizedBox(height: 8),
-                                DropdownButtonFormField<String>(
-                                  initialValue: selectedStatus,
-                                  decoration: InputDecoration(
-                                    border: OutlineInputBorder(
-                                      borderRadius: BorderRadius.circular(8),
-                                      borderSide: BorderSide(
-                                        color: AppTheme.primaryColor.withValues(
-                                          alpha: 0.3,
-                                        ),
-                                      ),
-                                    ),
-                                    enabledBorder: OutlineInputBorder(
-                                      borderRadius: BorderRadius.circular(8),
-                                      borderSide: BorderSide(
-                                        color: AppTheme.primaryColor.withValues(
-                                          alpha: 0.3,
-                                        ),
-                                      ),
-                                    ),
-                                    focusedBorder: OutlineInputBorder(
-                                      borderRadius: BorderRadius.circular(8),
-                                      borderSide: BorderSide(
-                                        color: AppTheme.primaryColor,
-                                        width: 2,
-                                      ),
-                                    ),
-                                    contentPadding: const EdgeInsets.symmetric(
-                                      horizontal: 12,
-                                      vertical: 8,
-                                    ),
-                                  ),
-                                  dropdownColor: isDarkMode
-                                      ? AppTheme.darkBackgroundColor
-                                      : AppTheme.cardColor,
-                                  items: ['completed', 'pending', 'cancelled']
-                                      .map(
-                                        (status) => DropdownMenuItem(
-                                          value: status,
-                                          child: Text(status),
-                                        ),
-                                      )
-                                      .toList(),
-                                  onChanged: (value) {
-                                    setState(() => selectedStatus = value!);
-                                  },
-                                ),
-                              ],
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 20),
-                    ] else ...[
-                      Row(
-                        children: [
-                          Icon(
-                            selectedPaymentMethod == 'Cash'
-                                ? Icons.money
-                                : Icons.payment,
-                            color: selectedPaymentMethod == 'Cash'
-                                ? AppTheme.primaryGreen
-                                : AppTheme.primaryBlue,
-                          ),
-                          const SizedBox(width: 8),
-                          Text(
-                            'Payment: $selectedPaymentMethod',
-                            style: TextStyle(
-                              color: selectedPaymentMethod == 'Cash'
-                                  ? AppTheme.primaryGreen
-                                  : AppTheme.primaryBlue,
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
-                          const Spacer(),
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 8,
-                              vertical: 4,
-                            ),
-                            decoration: BoxDecoration(
-                              color: _getStatusColor().withValues(alpha: 0.1),
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                            child: Text(
-                              selectedStatus.toUpperCase(),
-                              style: TextStyle(
-                                color: _getStatusColor(),
-                                fontSize: 12,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 20),
-                    ],
-
-                    Row(
-                      children: [
-                        const Text(
-                          'Order Items',
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                        const Spacer(),
-                        if (widget.isEdit)
-                          Text(
-                            '${editableItems.length} items',
-                            style: TextStyle(fontSize: 14),
-                          ),
-                      ],
-                    ),
-                    const SizedBox(height: 12),
-
-                    ...editableItems.asMap().entries.map((entry) {
-                      final index = entry.key;
-                      final item = entry.value;
-                      return _buildItemCard(item, index);
-                    }),
-
-                    const SizedBox(height: 20),
-
-                    Container(
-                      padding: const EdgeInsets.all(16),
-                      decoration: BoxDecoration(
-                        color: AppTheme.primaryColor.withValues(alpha: 0.1),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: Row(
-                        children: [
-                          const Text(
-                            'Total Amount',
-                            style: TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                          const Spacer(),
-                          Text(
-                            '₹${_calculateTotal().toStringAsFixed(2)}',
-                            style: const TextStyle(
-                              fontSize: 20,
-                              fontWeight: FontWeight.bold,
-                              color: AppTheme.primaryColor,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-
-            if (widget.isEdit)
-              Container(
-                padding: const EdgeInsets.fromLTRB(20, 12, 20, 20),
-                decoration: BoxDecoration(
-                  color: isDarkMode
-                      ? AppTheme.darkBackgroundColor
-                      : AppTheme.cardColor,
-                  borderRadius: const BorderRadius.vertical(
-                    bottom: Radius.circular(16),
-                  ),
-                  border: Border(
-                    top: BorderSide(
-                      color: AppTheme.primaryColor.withValues(alpha: 0.2),
-                    ),
-                  ),
-                ),
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: TextButton(
-                        onPressed: () => Navigator.pop(context),
-                        child: Text(
-                          'Cancel',
-                          style: TextStyle(
-                            color: AppTheme.errorColor,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: ElevatedButton(
-                        onPressed: editableItems.isNotEmpty
-                            ? _saveChanges
-                            : null,
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: isDarkMode
-                              ? AppTheme.darkBackgroundColor
-                              : AppTheme.cardColor,
-                          foregroundColor: AppTheme.primaryColor,
-                          side: BorderSide(color: AppTheme.primaryColor),
-                        ),
-                        child: const Text(
-                          'Save Changes',
-                          style: TextStyle(fontWeight: FontWeight.bold),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-          ],
-        ),
-      ),
-    );
   }
 
   Widget _buildItemCard(OrderItem item, int index) {
@@ -556,6 +235,100 @@ class _OrderDetailDialogState extends State<OrderDetailDialog> {
     );
   }
 
+  Widget _buildPaymentChip(String method, IconData icon) {
+    final isSelected = selectedPaymentMethod == method;
+    Color chipColor;
+
+    switch (method) {
+      case 'Cash':
+        chipColor = AppTheme.primaryGreen;
+        break;
+      case 'UPI':
+        chipColor = AppTheme.primaryBlue;
+        break;
+      default:
+        chipColor = AppTheme.primaryOrange;
+    }
+
+    return FilterChip(
+      avatar: Icon(
+        icon,
+        size: 18,
+        color: isSelected ? chipColor : AppTheme.primaryGrey,
+      ),
+      label: Text(
+        method,
+        style: TextStyle(
+          fontSize: 13,
+          fontWeight: FontWeight.w600,
+          color: isSelected ? chipColor : AppTheme.textSecondaryColor,
+        ),
+      ),
+      side: BorderSide(
+        color: isSelected ? chipColor : chipColor.withValues(alpha: 0.6),
+        width: isSelected ? 2 : 0.5,
+      ),
+      showCheckmark: false,
+      selectedColor: chipColor.withValues(alpha: 0.15),
+      backgroundColor: chipColor.withValues(alpha: 0.05),
+      selected: isSelected,
+      onSelected: (value) {
+        setState(() {
+          selectedPaymentMethod = method;
+        });
+      },
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+    );
+  }
+
+  Widget _buildStatusChip(String status, IconData icon) {
+    final isSelected = selectedStatus.toLowerCase() == status.toLowerCase();
+    Color chipColor = _getStatusColorForStatus(status);
+
+    return FilterChip(
+      avatar: Icon(
+        icon,
+        size: 18,
+        color: isSelected ? chipColor : AppTheme.primaryGrey,
+      ),
+      label: Text(
+        status.toUpperCase(),
+        style: TextStyle(
+          fontSize: 13,
+          fontWeight: FontWeight.w600,
+          color: isSelected ? chipColor : AppTheme.textSecondaryColor,
+        ),
+      ),
+      side: BorderSide(
+        color: isSelected ? chipColor : chipColor.withValues(alpha: 0.6),
+        width: isSelected ? 2 : 0.5,
+      ),
+      showCheckmark: false,
+      selectedColor: chipColor.withValues(alpha: 0.15),
+      backgroundColor: chipColor.withValues(alpha: 0.05),
+      selected: isSelected,
+      onSelected: (value) {
+        setState(() {
+          selectedStatus = status;
+        });
+      },
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+    );
+  }
+
+  Color _getStatusColorForStatus(String status) {
+    switch (status.toLowerCase()) {
+      case 'completed':
+        return AppTheme.primaryGreen;
+      case 'pending':
+        return AppTheme.primaryOrange;
+      case 'cancelled':
+        return AppTheme.primaryRed;
+      default:
+        return AppTheme.primaryBlue;
+    }
+  }
+
   Color _getStatusColor() {
     switch (selectedStatus.toLowerCase()) {
       case 'completed':
@@ -567,5 +340,447 @@ class _OrderDetailDialogState extends State<OrderDetailDialog> {
       default:
         return AppTheme.primaryBlue;
     }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final isDarkMode = Theme.brightnessOf(context) == Brightness.dark;
+    final size = MediaQuery.sizeOf(context);
+    return Dialog(
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+        side: BorderSide(color: AppTheme.primaryColor),
+      ),
+      backgroundColor: isDarkMode
+          ? AppTheme.darkBackgroundColor
+          : AppTheme.cardColor,
+      surfaceTintColor: AppTheme.primaryColor,
+      child: Container(
+        width: size.width * 0.9,
+        constraints: BoxConstraints(
+          maxHeight: size.height * 0.85,
+          maxWidth: size.width,
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(20),
+              decoration: BoxDecoration(
+                color: AppTheme.primaryColor,
+                borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+              ),
+              child: Row(
+                children: [
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Order #${widget.order.id}',
+                        style: TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold,
+                          color: AppTheme.cardColor,
+                        ),
+                      ),
+                      Text(
+                        '${widget.order.timestamp.day}/${widget.order.timestamp.month}/${widget.order.timestamp.year} at ${widget.order.timestamp.hour}:${widget.order.timestamp.minute.toString().padLeft(2, '0')}',
+                        style: TextStyle(
+                          fontSize: 14,
+                          color: AppTheme.cardColor,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const Spacer(),
+                  IconButton(
+                    icon: Icon(Icons.close, color: AppTheme.cardColor),
+                    onPressed: () => Navigator.pop(context),
+                  ),
+                ],
+              ),
+            ),
+
+            Expanded(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.all(20),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    if (widget.isEdit) ...[
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text(
+                            'Payment Method',
+                            style: TextStyle(
+                              fontWeight: FontWeight.w600,
+                              fontSize: 13,
+                            ),
+                          ),
+                          Wrap(
+                            spacing: 8,
+                            runSpacing: 8,
+                            children: [
+                              _buildPaymentChip('Cash', Icons.money),
+                              _buildPaymentChip('UPI', Icons.payment),
+                              _buildPaymentChip('Pending', Icons.schedule),
+                            ],
+                          ),
+                        ],
+                      ),
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text(
+                            'Status',
+                            style: TextStyle(
+                              fontWeight: FontWeight.w600,
+                              fontSize: 13,
+                            ),
+                          ),
+                          Wrap(
+                            spacing: 8,
+                            runSpacing: 0,
+                            children: [
+                              _buildStatusChip('completed', Icons.check_circle),
+                              _buildStatusChip('pending', Icons.schedule),
+                              _buildStatusChip('cancelled', Icons.cancel),
+                            ],
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 10),
+                    ] else ...[
+                      Row(
+                        children: [
+                          Icon(
+                            selectedPaymentMethod == 'Cash'
+                                ? Icons.money
+                                : Icons.payment,
+                            color: selectedPaymentMethod == 'Cash'
+                                ? AppTheme.primaryGreen
+                                : AppTheme.primaryBlue,
+                          ),
+                          const SizedBox(width: 8),
+                          Text(
+                            'Payment: $selectedPaymentMethod',
+                            style: TextStyle(
+                              color: selectedPaymentMethod == 'Cash'
+                                  ? AppTheme.primaryGreen
+                                  : AppTheme.primaryBlue,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                          const Spacer(),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 8,
+                              vertical: 4,
+                            ),
+                            decoration: BoxDecoration(
+                              color: _getStatusColor().withValues(alpha: 0.1),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: Text(
+                              selectedStatus.toUpperCase(),
+                              style: TextStyle(
+                                color: _getStatusColor(),
+                                fontSize: 12,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 20),
+                    ],
+
+                    Row(
+                      children: [
+                        const Text(
+                          'Order Items',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        const Spacer(),
+                        if (widget.isEdit)
+                          Text(
+                            '${editableItems.length} items',
+                            style: TextStyle(fontSize: 14),
+                          ),
+                      ],
+                    ),
+                    const SizedBox(height: 10),
+
+                    if (widget.isEdit) ...[
+                      // Add new item section
+                      Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: AppTheme.primaryColor.withValues(alpha: 0.05),
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(
+                            color: AppTheme.primaryColor.withValues(alpha: 0.2),
+                          ),
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Text(
+                              'Add New Item',
+                              style: TextStyle(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                            const SizedBox(height: 10),
+                            DropdownButtonFormField<MenuItems>(
+                              initialValue: selectedNewItem,
+                              decoration: InputDecoration(
+                                isDense: true,
+                                border: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(8),
+                                  borderSide: BorderSide(
+                                    color: AppTheme.primaryColor.withValues(
+                                      alpha: 0.3,
+                                    ),
+                                  ),
+                                ),
+                                enabledBorder: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(8),
+                                  borderSide: BorderSide(
+                                    color: AppTheme.primaryColor.withValues(
+                                      alpha: 0.3,
+                                    ),
+                                  ),
+                                ),
+                                focusedBorder: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(8),
+                                  borderSide: BorderSide(
+                                    color: AppTheme.primaryColor,
+                                    width: 1.5,
+                                  ),
+                                ),
+                                contentPadding: const EdgeInsets.symmetric(
+                                  horizontal: 10,
+                                  vertical: 10,
+                                ),
+                                hintText: 'Select item',
+                                hintStyle: const TextStyle(fontSize: 12),
+                              ),
+                              dropdownColor: isDarkMode
+                                  ? AppTheme.darkBackgroundColor
+                                  : AppTheme.cardColor,
+                              items: MenuConstants.menuItems.map((item) {
+                                return DropdownMenuItem<MenuItems>(
+                                  value: item,
+                                  child: Text(
+                                    item.name,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: const TextStyle(fontSize: 12),
+                                  ),
+                                );
+                              }).toList(),
+                              onChanged: (value) {
+                                setState(() => selectedNewItem = value);
+                              },
+                            ),
+                            const SizedBox(height: 5),
+                            Row(
+                              children: [
+                                Container(
+                                  decoration: BoxDecoration(
+                                    border: Border.all(
+                                      color: AppTheme.primaryColor.withValues(
+                                        alpha: 0.3,
+                                      ),
+                                    ),
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      InkWell(
+                                        onTap: selectedNewQuantity > 1
+                                            ? () => setState(
+                                                () => selectedNewQuantity--,
+                                              )
+                                            : null,
+                                        child: Container(
+                                          padding: const EdgeInsets.all(8),
+                                          child: Icon(
+                                            Icons.remove,
+                                            size: 16,
+                                            color: selectedNewQuantity > 1
+                                                ? AppTheme.primaryColor
+                                                : AppTheme.primaryGrey,
+                                          ),
+                                        ),
+                                      ),
+                                      Container(
+                                        constraints: const BoxConstraints(
+                                          minWidth: 32,
+                                        ),
+                                        alignment: Alignment.center,
+                                        child: Text(
+                                          '$selectedNewQuantity',
+                                          style: const TextStyle(
+                                            fontWeight: FontWeight.w600,
+                                            fontSize: 14,
+                                          ),
+                                        ),
+                                      ),
+                                      InkWell(
+                                        onTap: () => setState(
+                                          () => selectedNewQuantity++,
+                                        ),
+                                        child: Container(
+                                          padding: const EdgeInsets.all(8),
+                                          child: Icon(
+                                            Icons.add,
+                                            size: 16,
+                                            color: AppTheme.primaryColor,
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                const SizedBox(width: 8),
+                                Expanded(
+                                  child: ElevatedButton(
+                                    onPressed: selectedNewItem != null
+                                        ? _addNewItemToOrder
+                                        : null,
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor: AppTheme.primaryColor,
+                                      foregroundColor: AppTheme.cardColor,
+                                      padding: EdgeInsets.zero,
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(12),
+                                      ),
+                                    ),
+                                    child: const Text(
+                                      'Add',
+                                      style: TextStyle(fontSize: 13),
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                    ],
+
+                    ...editableItems.asMap().entries.map((entry) {
+                      final index = entry.key;
+                      final item = entry.value;
+                      return _buildItemCard(item, index);
+                    }),
+
+                    const SizedBox(height: 10),
+
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: AppTheme.primaryColor.withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Row(
+                        children: [
+                          const Text(
+                            'Total Amount',
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          const Spacer(),
+                          Text(
+                            '₹${_calculateTotal().toStringAsFixed(2)}',
+                            style: const TextStyle(
+                              fontSize: 20,
+                              fontWeight: FontWeight.bold,
+                              color: AppTheme.primaryColor,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+
+            if (widget.isEdit)
+              Container(
+                padding: const EdgeInsets.fromLTRB(20, 12, 20, 20),
+                decoration: BoxDecoration(
+                  color: isDarkMode
+                      ? AppTheme.darkBackgroundColor
+                      : AppTheme.cardColor,
+                  borderRadius: const BorderRadius.vertical(
+                    bottom: Radius.circular(16),
+                  ),
+                  border: Border(
+                    top: BorderSide(
+                      color: AppTheme.primaryColor.withValues(alpha: 0.2),
+                    ),
+                  ),
+                  
+                ),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: TextButton(
+                        onPressed: () => Navigator.pop(context),
+                        style: TextButton.styleFrom(
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                        child: Text(
+                          'Cancel',
+                          style: TextStyle(
+                            color: AppTheme.errorColor,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: ElevatedButton(
+                        onPressed: editableItems.isNotEmpty
+                            ? _saveChanges
+                            : null,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: isDarkMode
+                              ? AppTheme.darkBackgroundColor
+                              : AppTheme.cardColor,
+                          foregroundColor: AppTheme.primaryColor,
+                          side: BorderSide(color: AppTheme.primaryColor),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                        child: const Text(
+                          'Save Changes',
+                          style: TextStyle(fontWeight: FontWeight.bold),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
   }
 }
